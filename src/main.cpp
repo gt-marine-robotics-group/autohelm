@@ -21,27 +21,6 @@ MCP_POT pot(10, 11, 12, 8, 9);
 // MCP_POT pot(5, 6, 7, &SPI);
 
 
-void setup()
-{
-  Serial.begin(115200);
-  Serial.println(__FILE__);
-
-  SPI.begin();
-
-  pot.begin();
-
-  //  test_extremes();
-  //  test_sinus();
-  //  test_sawtooth();
-  //  test_timing();
-
-  Serial.println("\nDone...");
-}
-
-
-void loop()
-{
-}
 
 void test_extremes()
 {
@@ -124,5 +103,36 @@ void test_timing()
   delay(10);
 }
 
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println(__FILE__);
+
+  SPI.begin();
+
+  pot.begin();
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  // test_extremes();
+  //  test_sinus();
+  //  test_sawtooth();
+  //  test_timing();
+
+  Serial.println("\nSetup Done...");
+}
 
 //  -- END OF FILE --
+
+
+
+
+void loop()
+{
+  digitalWrite(LED_BUILTIN, HIGH);
+  test_extremes();
+  Serial.println("\nTEST");
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(2000);
+
+}

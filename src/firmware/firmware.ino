@@ -44,13 +44,13 @@ void loop()
 void test_basic() 
 {
   Serial.println(__FUNCTION__);
-  delay(10);
+  delay(1000);
 
   Serial.println("Starting test of Potentiometer");
   for(int i = 0; i < MCP_POT_MAX_VALUE; i++) {
     pot.setValue(0, i);
     Serial.println(i);
-    delay(100);
+    delay(500);
   }
   delay(5000);
   pot.setValue(0, 0);
