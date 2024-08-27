@@ -15,7 +15,7 @@ uint32_t start, stop;
 
 
 //  select, reset, shutdown, data, clock == SOFTWARE SPI
-MCP_POT pot(10, 11, 12, 8, 9);
+MCP_POT pot(37, 9, 16, 11, 27);
 
 //  select, reset, shutdown, &SPI === HW SPI UNO clock = 13, data = 11
 // MCP_POT pot(5, 6, 7, &SPI);
