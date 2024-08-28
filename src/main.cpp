@@ -20,6 +20,9 @@ MCP_POT pot(37, 9, 16, 11, 27);
 //  select, reset, shutdown, &SPI === HW SPI UNO clock = 13, data = 11
 // MCP_POT pot(5, 6, 7, &SPI);
 
+uint32_t ww_m_en = 8;
+uint32_t ww_thr_en = 7;
+
 
 
 void test_extremes()
@@ -27,17 +30,26 @@ void test_extremes()
   Serial.println(__FUNCTION__);
   delay(10);
 
-  Serial.println("0");
-  pot.setValue(0, 0);
-  delay(2000);
+  Serial.println(MCP_POT_MIDDLE_VALUE);
+  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+  delay(4000);
+
+  digitalWrite(ww_m_en, HIGH);
+
+  delay(4000);
+
+  // Serial.println("0");
+  // pot.setValue(0, 0);
+  // delay(2000);
+
+  // Serial.println(MCP_POT_MAX_VALUE);
+  pot.setValue(0, 200);
+  delay(1000);
 
   Serial.println(MCP_POT_MIDDLE_VALUE);
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  delay(2000);
-
-  Serial.println(MCP_POT_MAX_VALUE);
-  pot.setValue(0, MCP_POT_MAX_VALUE);
-  delay(2000);
+  delay(7000);
+  digitalWrite(ww_m_en, LOW);
 }
 
 
@@ -113,6 +125,7 @@ void setup()
   pot.begin();
 
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(ww_m_en, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   // test_extremes();
   //  test_sinus();
