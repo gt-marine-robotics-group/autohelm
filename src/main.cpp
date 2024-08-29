@@ -42,13 +42,27 @@ void test_extremes()
   // pot.setValue(0, 0);
   // delay(2000);
 
+
   // Serial.println(MCP_POT_MAX_VALUE);
-  pot.setValue(0, 200);
+  digitalWrite(ww_thr_en, HIGH);
   delay(1000);
+  pot.setValue(0, 200);
+  for (int i = 128; i < 192; i++) {
+    pot.setValue(0, i);
+    delay(20);
+  }
+  // pot.setValue(0, 200);
+  delay(500);
+  for (int i = 192; i > 128; i--) {
+    pot.setValue(0, i);
+    delay(20);
+  }
+  delay(200);
+  digitalWrite(ww_thr_en, LOW);
 
   Serial.println(MCP_POT_MIDDLE_VALUE);
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  delay(7000);
+  delay(2000);
   digitalWrite(ww_m_en, LOW);
 }
 
@@ -126,6 +140,7 @@ void setup()
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(ww_m_en, OUTPUT);
+  pinMode(ww_thr_en, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   // test_extremes();
   //  test_sinus();
