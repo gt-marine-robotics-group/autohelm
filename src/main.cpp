@@ -1,166 +1,111 @@
 #include <Arduino.h>
-//
-//    FILE: MCP_POT_demo.ino
-//  AUTHOR: Rob Tillaart
-// PURPOSE: demo
-//     URL: https://github.com/RobTillaart/MCP_POT
+#include <micro_ros_platformio.h>
 
+#include <rcl/rcl.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+
+#include <std_msgs/msg/int32.h>
 
 #include <MCP_POT.h>
 
-//test file for MCP_POT below 
+rcl_subscription_t subscriber;
+std_msgs__msg__Int32 msg;
+rclc_executor_t executor;
+rclc_support_t support;
+rcl_allocator_t allocator;
+rcl_node_t node;
 
-
-uint32_t start, stop;
-
-
-//  select, reset, shutdown, data, clock == SOFTWARE SPI
 MCP_POT pot(37, 9, 16, 11, 27);
-
-//  select, reset, shutdown, &SPI === HW SPI UNO clock = 13, data = 11
-// MCP_POT pot(5, 6, 7, &SPI);
-
 uint32_t ww_m_en = 8;
 uint32_t ww_thr_en = 7;
 
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+#define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 
-
-void test_extremes()
-{
-  Serial.println(__FUNCTION__);
-  delay(10);
-
-  Serial.println(MCP_POT_MIDDLE_VALUE);
-  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  delay(4000);
-
-  digitalWrite(ww_m_en, HIGH);
-
-  delay(4000);
-
-  // Serial.println("0");
-  // pot.setValue(0, 0);
-  // delay(2000);
-
-
-  // Serial.println(MCP_POT_MAX_VALUE);
-  digitalWrite(ww_thr_en, HIGH);
-  delay(1000);
-  pot.setValue(0, 200);
-  for (int i = 128; i < 192; i++) {
-    pot.setValue(0, i);
-    delay(20);
-  }
-  // pot.setValue(0, 200);
-  delay(500);
-  for (int i = 192; i > 128; i--) {
-    pot.setValue(0, i);
-    delay(20);
-  }
-  delay(200);
-  digitalWrite(ww_thr_en, LOW);
-
-  Serial.println(MCP_POT_MIDDLE_VALUE);
-  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  delay(2000);
-  digitalWrite(ww_m_en, LOW);
-}
-
-
-//  connect all A GND and B 5V
-//  every W will have a different signal (same freq).
-void test_sinus()
-{
-  Serial.println(__FUNCTION__);
-  delay(10);
-
-  start = millis();
-  uint32_t i = 0;
-  while (millis() - start < 10000)
-  {
-    int8_t value = 127 * sin(i * TWO_PI / 100);
-    pot.setValue(0, 128 + value);
-    pot.setValue(1, 128 + value / 2);
-    i++;
-  }
-}
-
-//  straightforward sawtooth.
-void test_sawtooth()
-{
-  Serial.println(__FUNCTION__);
-  delay(10);
-
-  start = millis();
-  uint8_t i = 0;
-  while (millis() - start < 25500)
-  {
-    pot.setValue(0, i++);  //  auto wrap is fast...
+void error_loop(){
+  while(1){
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     delay(100);
   }
 }
 
+void subscription_callback(const void * msgin)
+{  
+  // Loads in message and sets throttle to data
+  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
+  //digitalWrite(LED_BUILTIN, (msg->data == 0) ? LOW : HIGH);  
+  uint16_t throttle = msg->data;
 
-void test_timing()
-{
-  Serial.println(__FUNCTION__);
-  delay(10);
+  // Setting potentiometer 0 to middle value
+  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+  delay(4000);
 
-  start = micros();
-  for (int i = 0; i < 1000; i++)
-  {
-    pot.setValue(0, i++);  //  auto wrap is fast...
-  }
-  stop = micros();
-  Serial.print("1000 x setValue():\t");
-  Serial.println(stop - start);
-  delay(10);
+  // Setting wigwag motor enable (key) to on
+  digitalWrite(ww_m_en, HIGH);
+  delay(4000);
 
-  volatile int x = 0;
-  start = micros();
-  for (int i = 0; i < 500; i++)
-  {
-    x += pot.getValue(0);
-    x += pot.getValue(1);
-  }
-  stop = micros();
-  Serial.print("1000 x getValue():\t");
-  Serial.println(stop - start);
-  delay(10);
+  // Setting throttle enable to on
+  digitalWrite(ww_thr_en, HIGH);
+  delay(1000);
+
+  // Incrementing from neutral to throttle value
+  // for (int i = 128; i < throttle; i++) {
+  //   pot.setValue(0, i);
+  //   delay(20);
+  // }
+  pot.setValue(0, throttle);
+  delay(2000);
+  // Decrementing from throttle to neutral value
+  // for (int i = throttle; i > 128; i--) {
+  //   pot.setValue(0, i);
+  //   delay(20);
+  // }
+  delay(200);
+  // Set throttle enable to off
+  digitalWrite(ww_thr_en, LOW);
+
+  // Set potentiometer 0 to middle value
+  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+  delay(2000);
+  // Set motor enable to off
+  digitalWrite(ww_m_en, LOW);
 }
 
-void setup()
-{
+void setup() {
   Serial.begin(115200);
-  Serial.println(__FILE__);
-
-  SPI.begin();
-
-  pot.begin();
-
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(ww_m_en, OUTPUT);
-  pinMode(ww_thr_en, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-  // test_extremes();
-  //  test_sinus();
-  //  test_sawtooth();
-  //  test_timing();
-
-  Serial.println("\nSetup Done...");
-}
-
-//  -- END OF FILE --
-
-
-
-
-void loop()
-{
-  digitalWrite(LED_BUILTIN, HIGH);
-  test_extremes();
-  Serial.println("\nTEST");
-  digitalWrite(LED_BUILTIN, LOW);
+  set_microros_serial_transports(Serial);
   delay(2000);
 
+  SPI.begin();
+  pot.begin();
+  
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);  
+  
+  delay(2000);
+
+  allocator = rcl_get_default_allocator();
+
+  //create init_options
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+
+  // create node
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_platformio_node", "", &support));
+
+  // create subscriber
+  RCCHECK(rclc_subscription_init_default(
+    &subscriber,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "thrust_values"));
+
+  // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator)); // increment number for no. of subs/pubs
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+}
+
+void loop() {
+  delay(100);
+  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
