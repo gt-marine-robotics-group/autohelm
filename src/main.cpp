@@ -9,6 +9,19 @@
 
 #include <MCP_POT.h>
 
+#include <std_srvs/srv/trigger.h>
+
+rcl_service_t service;
+std_srv_TriggerService_Response res;
+std_srv_TriggerService_Request req;
+
+void service_callback(const void * req, void * res){
+  std_srv_TriggerService_Request * req_in = (std_srv_TriggerService_Request *) req;
+  std_srv_TriggerService_Response * res_in = (std_srv_TriggerService_Response *) res;
+  
+  res_in->success = true; 
+}
+
 rcl_subscription_t subscriber;
 std_msgs__msg__Int32 msg;
 rclc_executor_t executor;
@@ -99,6 +112,9 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
     "thrust_values"));
+
+  // create service
+  RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srv, srv, Trigger), "srv_trigger"));
 
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator)); // increment number for no. of subs/pubs
