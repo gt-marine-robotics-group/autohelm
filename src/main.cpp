@@ -9,8 +9,12 @@
 
 #include <MCP_POT.h>
 
-rcl_subscription_t subscriber;
-std_msgs__msg__Int32 msg;
+// Initialize two subscribers for port and starboard motors
+rcl_subscription_t port_motor;
+rcl_subscription_t stbd_motor;
+
+std_msgs__msg__Int32 port_msg;
+std_msgs__msg__Int32 stbd_msg;
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
@@ -30,46 +34,26 @@ void error_loop(){
   }
 }
 
-void subscription_callback(const void * msgin)
+void subscription_callback_port(const void * msgin)
 {  
-  // Loads in message and sets throttle to data
+  // Loads the message for the port motor
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
-  //digitalWrite(LED_BUILTIN, (msg->data == 0) ? LOW : HIGH);  
   uint16_t throttle = msg->data;
 
-  // Setting potentiometer 0 to middle value
-  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  delay(4000);
-
-  // Setting wigwag motor enable (key) to on
-  digitalWrite(ww_m_en, HIGH);
-  delay(4000);
-
-  // Setting throttle enable to on
-  digitalWrite(ww_thr_en, HIGH);
-  delay(1000);
-
-  // Incrementing from neutral to throttle value
-  // for (int i = 128; i < throttle; i++) {
-  //   pot.setValue(0, i);
-  //   delay(20);
-  // }
+  // Simulate motor control (adjust this as per actual use case)
   pot.setValue(0, throttle);
   delay(2000);
-  // Decrementing from throttle to neutral value
-  // for (int i = throttle; i > 128; i--) {
-  //   pot.setValue(0, i);
-  //   delay(20);
-  // }
-  delay(200);
-  // Set throttle enable to off
-  digitalWrite(ww_thr_en, LOW);
+}
 
-  // Set potentiometer 0 to middle value
-  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+void subscription_callback_stbd(const void * msgin)
+{  
+  // Loads the message for the starboard motor
+  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
+  uint16_t throttle = msg->data;
+
+  // Simulate motor control (adjust this as per actual use case)
+  pot.setValue(0, throttle);
   delay(2000);
-  // Set motor enable to off
-  digitalWrite(ww_m_en, LOW);
 }
 
 void setup() {
@@ -87,22 +71,30 @@ void setup() {
 
   allocator = rcl_get_default_allocator();
 
-  //create init_options
+  // Initialize ROS 2 support
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
 
-  // create node
+  // Create node
   RCCHECK(rclc_node_init_default(&node, "micro_ros_platformio_node", "", &support));
 
-  // create subscriber
+  // Create subscriber for port motor with topic /wamv/port_motor
   RCCHECK(rclc_subscription_init_default(
-    &subscriber,
+    &port_motor,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "thrust_values"));
+    "/wamv/port_motor"));
 
-  // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator)); // increment number for no. of subs/pubs
-  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+  // Create subscriber for starboard motor with topic /wamv/stbd_motor
+  RCCHECK(rclc_subscription_init_default(
+    &stbd_motor,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "/wamv/stbd_motor"));
+
+  // Create executor for handling both subscriptions
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));  // Allow 2 subscriptions
+  RCCHECK(rclc_executor_add_subscription(&executor, &port_motor, &port_msg, &subscription_callback_port, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &stbd_motor, &stbd_msg, &subscription_callback_stbd, ON_NEW_DATA));
 }
 
 void loop() {
