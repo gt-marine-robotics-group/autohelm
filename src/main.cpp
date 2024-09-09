@@ -16,13 +16,6 @@ rcl_service_t service;
 std_srvs__srv__Trigger_Response res;
 std_srvs__srv__Trigger_Request req;
 
-void service_callback(const void * req, void * res){
-  std_srvs__srv__Trigger_Request * req_in = (std_srvs__srv__Trigger_Request *) req;
-  std_srvs__srv__Trigger_Response * res_in = (std_srvs__srv__Trigger_Response *) res;
-  
-  res_in->success = true; 
-}
-
 // Initialize two subscribers for port and starboard motors
 rcl_subscription_t port_motor;
 rcl_subscription_t stbd_motor;
@@ -69,6 +62,13 @@ void subscription_callback_stbd(const void * msgin)
   // Simulate motor control (adjust this as per actual use case)
   pot.setValue(0, throttle);
   delay(2000);
+}
+
+void service_callback(const void * req, void * res){
+  std_srvs__srv__Trigger_Request * req_in = (std_srvs__srv__Trigger_Request *) req;
+  std_srvs__srv__Trigger_Response * res_in = (std_srvs__srv__Trigger_Response *) res;
+  
+  res_in->success = true; 
 }
 
 void setup() {
