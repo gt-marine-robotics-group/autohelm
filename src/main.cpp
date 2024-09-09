@@ -12,12 +12,13 @@
 #include <std_srvs/srv/trigger.h>
 
 rcl_service_t service;
-std_srv_TriggerService_Response res;
-std_srv_TriggerService_Request req;
+
+std_srvs__srv__Trigger_Response res;
+std_srvs__srv__Trigger_Request req;
 
 void service_callback(const void * req, void * res){
-  std_srv_TriggerService_Request * req_in = (std_srv_TriggerService_Request *) req;
-  std_srv_TriggerService_Response * res_in = (std_srv_TriggerService_Response *) res;
+  std_srvs__srv__Trigger_Request * req_in = (std_srvs__srv__Trigger_Request *) req;
+  std_srvs__srv__Trigger_Response * res_in = (std_srvs__srv__Trigger_Response *) res;
   
   res_in->success = true; 
 }
@@ -105,9 +106,11 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
     "/wamv/stbd_motor"));
 
+  RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, Trigger), "srv_trigger"));
+
   // Create executor for handling both subscriptions
   RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));  // Allow 2 subscriptions
-  RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srv, srv, Trigger), "srv_trigger"));
+  RCCHECK(rclc_executor_add_service(&executor, &service, &req, &res, service_callback));
   RCCHECK(rclc_executor_add_subscription(&executor, &port_motor, &port_msg, &subscription_callback_port, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &stbd_motor, &stbd_msg, &subscription_callback_stbd, ON_NEW_DATA));
 }
