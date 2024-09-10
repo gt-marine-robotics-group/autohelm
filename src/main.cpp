@@ -51,8 +51,8 @@ void subscription_callback_port(const void * msgin)
 {  
   // Loads the message for the port motor
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
-  float effort = msg -> data;
-  uint16_t throttle = msg-> throttle_convert(effort);
+  float effort = msg->data;
+  uint16_t throttle = throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
   pot.setValue(0, throttle);
@@ -63,7 +63,8 @@ void subscription_callback_stbd(const void * msgin)
 {  
   // Loads the message for the starboard motor
   const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
-  uint16_t throttle = msg->data;
+  float effort = msg->data;
+  uint16_t throttle = throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
   pot.setValue(1, throttle);
