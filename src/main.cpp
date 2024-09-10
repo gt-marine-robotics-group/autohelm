@@ -5,7 +5,7 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 
-#include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/float32.h>
 
 #include <MCP_POT.h>
 
@@ -20,8 +20,8 @@ std_srvs__srv__Trigger_Request req;
 rcl_subscription_t port_motor;
 rcl_subscription_t stbd_motor;
 
-std_msgs__msg__Int32 port_msg;
-std_msgs__msg__Int32 stbd_msg;
+std_msgs__msg__Float32 port_msg;
+std_msgs__msg__Float32 stbd_msg;
 
 rclc_executor_t executor;
 rclc_support_t support;
@@ -42,11 +42,17 @@ void error_loop(){
   }
 }
 
+int16_t throttle_convert(float input){
+  input += 1.0f;
+  return (static_cast<int16_t>(input *= 128));
+}
+
 void subscription_callback_port(const void * msgin)
 {  
   // Loads the message for the port motor
-  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
-  uint16_t throttle = msg->data;
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
+  float effort = msg -> data;
+  uint16_t throttle = msg-> throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
   pot.setValue(0, throttle);
@@ -56,13 +62,13 @@ void subscription_callback_port(const void * msgin)
 void subscription_callback_stbd(const void * msgin)
 {  
   // Loads the message for the starboard motor
-  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
+  const std_msgs__msg__Float32 * msg = (const std_msgs__msg__Float32 *)msgin;
   uint16_t throttle = msg->data;
 
   // Simulate motor control (adjust this as per actual use case)
   pot.setValue(1, throttle);
   delay(2000);
-}
+} 
 
 void service_callback(const void * req, void * res){
   std_srvs__srv__Trigger_Request * req_in = (std_srvs__srv__Trigger_Request *) req;
@@ -102,14 +108,14 @@ void setup() {
   RCCHECK(rclc_subscription_init_default(
     &port_motor,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "/wamv/port_motor"));
 
   // Create subscriber for starboard motor with topic /wamv/stbd_motor
   RCCHECK(rclc_subscription_init_default(
     &stbd_motor,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "/wamv/stbd_motor"));
 
   RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, Trigger), "srv_trigger"));
