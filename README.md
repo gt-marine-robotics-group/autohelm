@@ -3,7 +3,7 @@
 ## Quick Start
 
 ```
-ros2 service call /srv_trigger std_srvs/srv/Trigger
+ros2 service call /autohelm/arm std_srvs/srv/SetBool "{data: true}"
 ```
 
 
@@ -14,8 +14,8 @@ ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyACM0 --baudrate 11
 
 ```
 # Publish ROS integer value for thrust
-ros2 topic pub /wamv/port_motor std_msgs/msg/Int32 "data: 200" --once
-ros2 topic pub /wamv/stbd_motor std_msgs/msg/Int32 "data: 200" --once
+ros2 topic pub /autohelm/port_motor std_msgs/msg/Float32 "data: 0.8" --once
+ros2 topic pub /autohelm/stbd_motor std_msgs/msg/Int32 "data: 200" --once
 ```
 
 
