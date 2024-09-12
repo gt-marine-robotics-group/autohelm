@@ -34,8 +34,23 @@ MCP_POT pot(37, 9, 16, 11, 27);
 uint32_t ww_m_en = 8;
 uint32_t ww_thr_en = 7;
 
+uint16_t port_throttle = 128;
+uint16_t stbd_throttle = 128;
+
+ulong loop_time = 0;
+ulong last_time = 0;
+
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
+
+void set_motor_throttles(){
+  if (loop_time - last_time > 2000){
+    port_throttle = 128;
+    stbd_throttle = 128;
+  }
+  pot.setValue(0, port_throttle);
+  pot.setValue(1, stbd_throttle);
+}
 
 void error_loop(){
   while(1){
@@ -57,8 +72,8 @@ void subscription_callback_port(const void * msgin)
   uint16_t throttle = throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
-  pot.setValue(0, throttle);
-  delay(2000);
+  port_throttle = throttle;
+  last_time = millis();
 }
 
 void subscription_callback_stbd(const void * msgin)
@@ -69,25 +84,26 @@ void subscription_callback_stbd(const void * msgin)
   uint16_t throttle = throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
-  pot.setValue(1, throttle);
-  delay(2000);
+  stbd_throttle = throttle;
+  last_time = millis();
 } 
 
 void service_callback(const void * req, void * res){
   std_srvs__srv__SetBool_Request * req_in = (std_srvs__srv__SetBool_Request *) req;
   std_srvs__srv__SetBool_Response * res_in = (std_srvs__srv__SetBool_Response *) res;
-  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  delay(4000);
-
+  
   bool arm = req_in->data;
 
   if(arm){
+    pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+    delay(4000);
     digitalWrite(ww_m_en, HIGH);
     delay(3000);
     digitalWrite(ww_thr_en, HIGH);
     delay(1000);
     res_in->success = true; 
   } else {
+    pot.setValue(0, MCP_POT_MIDDLE_VALUE);
     digitalWrite(ww_m_en, LOW);
     digitalWrite(ww_thr_en, LOW);
     res_in->success = true; 
@@ -113,7 +129,7 @@ void setup() {
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
 
   // Create node
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_platformio_node", "", &support));
+  RCCHECK(rclc_node_init_default(&node, "autohelm_node", "", &support));
 
   // Create subscriber for port motor with topic /wamv/port_motor
   RCCHECK(rclc_subscription_init_default(
@@ -139,6 +155,8 @@ void setup() {
 }
 
 void loop() {
+  loop_time = millis();
   delay(100);
+  set_motor_throttles();
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
