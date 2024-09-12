@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <micro_ros_platformio.h>
+#include <micro_ros_utilities/string_utilities.h>
 
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
@@ -9,12 +10,13 @@
 
 #include <MCP_POT.h>
 
-#include <std_srvs/srv/trigger.h>
+#include <std_srvs/srv/set_bool.h>
+#include <std_msgs/msg/string.h>
 
 rcl_service_t service;
 
-std_srvs__srv__Trigger_Response res;
-std_srvs__srv__Trigger_Request req;
+std_srvs__srv__SetBool_Response res;
+std_srvs__srv__SetBool_Request req;
 
 // Initialize two subscribers for port and starboard motors
 rcl_subscription_t port_motor;
@@ -72,16 +74,24 @@ void subscription_callback_stbd(const void * msgin)
 } 
 
 void service_callback(const void * req, void * res){
-  std_srvs__srv__Trigger_Request * req_in = (std_srvs__srv__Trigger_Request *) req;
-  std_srvs__srv__Trigger_Response * res_in = (std_srvs__srv__Trigger_Response *) res;
+  std_srvs__srv__SetBool_Request * req_in = (std_srvs__srv__SetBool_Request *) req;
+  std_srvs__srv__SetBool_Response * res_in = (std_srvs__srv__SetBool_Response *) res;
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
   delay(4000);
-  
-  digitalWrite(ww_m_en, HIGH);
-  delay(3000);
-  digitalWrite(ww_thr_en, HIGH);
-  delay(1000);
-  res_in->success = true; 
+
+  bool arm = req_in->data;
+
+  if(arm){
+    digitalWrite(ww_m_en, HIGH);
+    delay(3000);
+    digitalWrite(ww_thr_en, HIGH);
+    delay(1000);
+    res_in->success = true; 
+  } else {
+    digitalWrite(ww_m_en, LOW);
+    digitalWrite(ww_thr_en, LOW);
+    res_in->success = true; 
+  }  
 }
 
 void setup() {
@@ -110,16 +120,16 @@ void setup() {
     &port_motor,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/port_motor"));
+    "/autohelm/port_motor"));
 
   // Create subscriber for starboard motor with topic /wamv/stbd_motor
   RCCHECK(rclc_subscription_init_default(
     &stbd_motor,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-    "/wamv/stbd_motor"));
+    "/autohelm/stbd_motor"));
 
-  RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, Trigger), "srv_trigger"));
+  RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, SetBool), "/autohelm/arm"));
 
   // Create executor for handling both subscriptions
   RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));  // Allow 2 subscriptions
