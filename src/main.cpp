@@ -32,7 +32,22 @@ rcl_node_t node;
 
 MCP_POT pot(37, 9, 16, 11, 27);
 uint32_t ww_m_en = 8;
-uint32_t ww_thr_en = 7;
+uint32_t ww_thr0_en = 6;
+uint32_t ww_thr1_en = 7;
+
+uint32_t red_led = 30;
+uint32_t yellow_led = 31;
+uint32_t green_led = 32;
+
+uint32_t servo_1 = 23;
+uint32_t servo_2 = 22;
+uint32_t servo_3 = 21;
+uint32_t servo_4 = 20;
+uint32_t servo_5 = 19;
+uint32_t servo_6 = 18;
+
+// throttle_0_en = stbd
+// throttle_1_en = port
 
 uint16_t port_throttle = 128;
 uint16_t stbd_throttle = 128;
@@ -47,6 +62,16 @@ void set_motor_throttles(){
   if (loop_time - last_time > 2000){
     port_throttle = 128;
     stbd_throttle = 128;
+  }
+  if (port_throttle != 128) {
+    digitalWrite(ww_thr0_en, HIGH);
+  } else {
+    digitalWrite(ww_thr0_en, LOW);
+  }
+  if (stbd_throttle != 128) {
+    digitalWrite(ww_thr1_en, HIGH);
+  } else {
+    digitalWrite(ww_thr1_en, LOW);
   }
   pot.setValue(0, port_throttle);
   pot.setValue(1, stbd_throttle);
@@ -98,14 +123,13 @@ void service_callback(const void * req, void * res){
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
     delay(4000);
     digitalWrite(ww_m_en, HIGH);
-    delay(3000);
-    digitalWrite(ww_thr_en, HIGH);
     delay(1000);
     res_in->success = true; 
   } else {
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
     digitalWrite(ww_m_en, LOW);
-    digitalWrite(ww_thr_en, LOW);
+    digitalWrite(ww_thr0_en, LOW);
+    digitalWrite(ww_thr1_en, LOW);
     res_in->success = true; 
   }  
 }
@@ -118,8 +142,12 @@ void setup() {
   SPI.begin();
   pot.begin();
   
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);  
+  pinMode(red_led, OUTPUT);
+  digitalWrite(red_led, HIGH);  
+  pinMode(yellow_led, OUTPUT);
+  digitalWrite(yellow_led, HIGH);
+  pinMode(green_led, OUTPUT);
+  digitalWrite(green_led, HIGH);
   
   delay(2000);
 
