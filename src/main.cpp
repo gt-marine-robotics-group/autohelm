@@ -10,6 +10,7 @@
 
 #include <MCP_POT.h>
 
+// #include <rmw_microros/rmw_microros.h>
 #include <std_srvs/srv/set_bool.h>
 #include <std_msgs/msg/string.h>
 
@@ -55,8 +56,26 @@ uint16_t stbd_throttle = 128;
 ulong loop_time = 0;
 ulong last_time = 0;
 
-#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+enum states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED
+} state;
+
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
+
+#define EXECUTE_EVERY_N_MS(MS, X) \
+  do { \
+    static volatile int64_t init = -1; \
+    if (init == -1) { init = uxr_millis(); } \
+    if (uxr_millis() - init > MS) { \
+      X; \
+      init = uxr_millis(); \
+    } \
+  } while (0)
+
 
 void set_motor_throttles(){
   if (loop_time - last_time > 2000){
@@ -77,12 +96,12 @@ void set_motor_throttles(){
   pot.setValue(1, stbd_throttle);
 }
 
-void error_loop(){
-  while(1){
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-    delay(100);
-  }
-}
+// void error_loop(){
+//   while(1){
+//     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+//     delay(100);
+//   }
+// }
 
 int16_t throttle_convert(float input){
   input += 1.0f;
@@ -121,7 +140,7 @@ void service_callback(const void * req, void * res){
 
   if(arm){
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-    delay(4000);
+    delay(100);
     digitalWrite(ww_m_en, HIGH);
     delay(1000);
     res_in->success = true; 
@@ -134,23 +153,8 @@ void service_callback(const void * req, void * res){
   }  
 }
 
-void setup() {
-  Serial.begin(115200);
-  set_microros_serial_transports(Serial);
-  delay(2000);
-
-  SPI.begin();
-  pot.begin();
-  
-  pinMode(red_led, OUTPUT);
-  digitalWrite(red_led, HIGH);  
-  pinMode(yellow_led, OUTPUT);
-  digitalWrite(yellow_led, HIGH);
-  pinMode(green_led, OUTPUT);
-  digitalWrite(green_led, HIGH);
-  
-  delay(2000);
-
+bool ros_create_entities() {
+  delay(1000);
   allocator = rcl_get_default_allocator();
 
   // Initialize ROS 2 support
@@ -174,17 +178,96 @@ void setup() {
     "/autohelm/stbd_motor"));
 
   RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, SetBool), "/autohelm/arm"));
-
+ 
   // Create executor for handling both subscriptions
   RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));  // Allow 2 subscriptions
   RCCHECK(rclc_executor_add_service(&executor, &service, &req, &res, service_callback));
   RCCHECK(rclc_executor_add_subscription(&executor, &port_motor, &port_msg, &subscription_callback_port, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &stbd_motor, &stbd_msg, &subscription_callback_stbd, ON_NEW_DATA));
+  return true;
+}
+
+void ros_destroy_entities() {
+  rmw_context_t *rmw_context = rcl_context_get_rmw_context(&support.context);
+  (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
+  rcl_subscription_fini(&stbd_motor, &node);
+  rcl_subscription_fini(&port_motor, &node);
+  rcl_service_fini(&service, &node);
+  rclc_executor_fini(&executor);
+  rcl_node_fini(&node);
+  rclc_support_fini(&support);
+}
+
+void ros_handler() {
+  bool created = false;
+  switch (state) {
+    case WAITING_AGENT:
+      EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 2)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      digitalWrite(yellow_led, HIGH);  
+      break;
+    case AGENT_AVAILABLE:
+      created = ros_create_entities();
+      state = (true == created) ? AGENT_CONNECTED : WAITING_AGENT;
+      delay(100);
+      digitalWrite(yellow_led, LOW);
+      if (state == WAITING_AGENT) {
+        ros_destroy_entities();
+        digitalWrite(green_led, HIGH);         
+      };
+
+      break;
+    case AGENT_CONNECTED:
+      EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 4)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      digitalWrite(green_led, HIGH); 
+      break;
+    case AGENT_DISCONNECTED:
+      ros_destroy_entities();
+      delay(100);
+      state = WAITING_AGENT;
+      digitalWrite(green_led, LOW); 
+      break;
+    default:
+      break;
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  set_microros_serial_transports(Serial);
+  delay(2000);
+
+  SPI.begin();
+  pot.begin();
+
+  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+  pot.setValue(1, MCP_POT_MIDDLE_VALUE);
+  
+  pinMode(red_led, OUTPUT);
+  digitalWrite(red_led, HIGH);  
+  pinMode(yellow_led, OUTPUT);
+  digitalWrite(yellow_led, HIGH);
+  pinMode(green_led, OUTPUT);
+  digitalWrite(green_led, HIGH);
+  
+  delay(500);
+
+  digitalWrite(red_led, LOW);  
+  digitalWrite(yellow_led, LOW);
+  digitalWrite(green_led, LOW);
+
+  state = WAITING_AGENT;
+
+  // ros_create_entities();
 }
 
 void loop() {
   loop_time = millis();
-  delay(100);
+  
+ 
+  ros_handler();
   set_motor_throttles();
-  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+  if (state == AGENT_CONNECTED) {
+    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+  }
 }
