@@ -104,8 +104,8 @@ void set_motor_throttles(){
 // }
 
 int16_t throttle_convert(float input){
-  input += 1.0f;
-  return (static_cast<int16_t>(input *= 128));
+  input += 100f; // -100 -> 0
+  return (static_cast<int16_t>(input *= 1.28f)); // 100 -> 128
 }
 
 void subscription_callback_port(const void * msgin)
