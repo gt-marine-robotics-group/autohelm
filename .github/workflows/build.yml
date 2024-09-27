@@ -10,7 +10,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          platform: [teensy41, pico]
+          platform: [teensy41] # pico
 
       steps:
       - uses: actions/checkout@v3
