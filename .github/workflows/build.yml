@@ -3,22 +3,24 @@ name: PlatformIO CI
 on: [push, workflow_dispatch]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  micro_ros_platformio:
+      runs-on: ubuntu-22.04
+      container: ubuntu:22.04
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            ~/.platformio/.cache
-          key: ${{ runner.os }}-pio
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install PlatformIO Core
-        run: pip install --upgrade platformio
+      strategy:
+        fail-fast: false
+        matrix:
+          platform: [teensy41, pico]
 
-      - name: Build PlatformIO Project
-        run: pio run
+      steps:
+      - uses: actions/checkout@v3
+        with:
+          path: repo
+      - name: Install environment
+        uses: ./repo/.github/actions/platformio-env
+      - name: Build
+        shell: bash
+        run: |
+          export PATH=$PATH:~/.platformio/penv/bin
+          cd repo/ci
+          pio run -e ${{ matrix.platform }}
