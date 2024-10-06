@@ -104,15 +104,15 @@ void set_motor_throttles(){
 // }
 
 int16_t throttle_convert(float input){
-  input += 1.0f;
-  return (static_cast<int16_t>(input *= 128));
+  input += 100.0;
+  return (static_cast<int16_t>(input *= 1.28));
 }
 
 void subscription_callback_port(const void * msgin)
 {  
   // Loads the message for the port motor
   const std_msgs__msg__Float64 * msg = (const std_msgs__msg__Float64 *)msgin;
-  float effort = msg->data;
+  double effort = msg->data;
   uint16_t throttle = throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
@@ -124,7 +124,7 @@ void subscription_callback_stbd(const void * msgin)
 {  
   // Loads the message for the starboard motor
   const std_msgs__msg__Float64 * msg = (const std_msgs__msg__Float64 *)msgin;
-  float effort = msg->data;
+  double effort = msg->data;
   uint16_t throttle = throttle_convert(effort);
 
   // Simulate motor control (adjust this as per actual use case)
@@ -140,12 +140,14 @@ void service_callback(const void * req, void * res){
 
   if(arm){
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+    pot.setValue(1, MCP_POT_MIDDLE_VALUE);
     delay(100);
     digitalWrite(ww_m_en, HIGH);
     delay(1000);
     res_in->success = true; 
   } else {
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+    pot.setValue(1, MCP_POT_MIDDLE_VALUE);
     digitalWrite(ww_m_en, LOW);
     digitalWrite(ww_thr0_en, LOW);
     digitalWrite(ww_thr1_en, LOW);
