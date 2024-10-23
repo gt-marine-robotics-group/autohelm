@@ -13,6 +13,13 @@
 // #include <rmw_microros/rmw_microros.h>
 #include <std_srvs/srv/set_bool.h>
 #include <std_msgs/msg/string.h>
+#include <std_msgs/msg/bool.h>
+
+rcl_publisher_t estop_pub;
+
+std_msgs__msg__Bool estop_msg;
+
+rcl_timer_t timer;
 
 rcl_service_t service;
 
@@ -103,6 +110,9 @@ void set_motor_throttles(){
 //   }
 // }
 
+
+
+
 int16_t throttle_convert(float input){
   input *= .9f; // -100 -> -90, 100 -> 90
   input += 100.0f; // -100 -> 0
@@ -121,6 +131,18 @@ void subscription_callback_port(const void * msgin)
   // Simulate motor control (adjust this as per actual use case)
   port_throttle = throttle;
   last_time = millis();
+}
+
+void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  digitalWrite(red_led, HIGH);
+  delay(100);
+  digitalWrite(red_led, LOW);
+  delay(100);
+  if (timer != NULL) {
+    estop_msg.data = true;
+    RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
+  }
 }
 
 void subscription_callback_stbd(const void * msgin)
@@ -166,6 +188,13 @@ bool ros_create_entities() {
   // Create node
   RCCHECK(rclc_node_init_default(&node, "autohelm_node", "", &support));
 
+  // create publisher
+  RCCHECK(rclc_publisher_init_default(
+    &estop_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "/autohelm/estop"));
+
   // Create subscriber for port motor with topic /wamv/port_motor
   RCCHECK(rclc_subscription_init_default(
     &port_motor,
@@ -180,13 +209,21 @@ bool ros_create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float64),
     "/autohelm/stbd_motor"));
 
+  const unsigned int timer_timeout = 1000;
+  RCCHECK(rclc_timer_init_default(
+    &timer,
+    &support,
+    RCL_MS_TO_NS(timer_timeout),
+    timer_callback));
+
   RCCHECK(rclc_service_init_default(&service, &node, ROSIDL_GET_SRV_TYPE_SUPPORT(std_srvs, srv, SetBool), "/autohelm/arm"));
  
   // Create executor for handling both subscriptions
-  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));  // Allow 2 subscriptions
+  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));  // Allow 2 subscriptions
   RCCHECK(rclc_executor_add_service(&executor, &service, &req, &res, service_callback));
   RCCHECK(rclc_executor_add_subscription(&executor, &port_motor, &port_msg, &subscription_callback_port, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &stbd_motor, &stbd_msg, &subscription_callback_stbd, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_timer(&executor, &timer));
   return true;
 }
 
@@ -197,6 +234,8 @@ void ros_destroy_entities() {
   rcl_subscription_fini(&stbd_motor, &node);
   rcl_subscription_fini(&port_motor, &node);
   rcl_service_fini(&service, &node);
+  rcl_publisher_fini(&estop_pub, &node);
+  rcl_timer_fini(&timer);
   rclc_executor_fini(&executor);
   rcl_node_fini(&node);
   rclc_support_fini(&support);
@@ -266,7 +305,8 @@ void setup() {
 
 void loop() {
   loop_time = millis();
-  
+  // estop_msg.data = true;
+  // RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
  
   ros_handler();
   set_motor_throttles();
