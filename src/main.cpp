@@ -135,12 +135,9 @@ void subscription_callback_port(const void * msgin)
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
-  digitalWrite(red_led, HIGH);
-  delay(100);
-  digitalWrite(red_led, LOW);
-  delay(100);
+  bool estop_status = bool(digitalRead(servo_6));
   if (timer != NULL) {
-    estop_msg.data = true;
+    estop_msg.data = estop_status;
     RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
   }
 }
@@ -284,6 +281,8 @@ void setup() {
 
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
   pot.setValue(1, MCP_POT_MIDDLE_VALUE);
+
+  pinMode(servo_6, INPUT_PULLUP);
   
   pinMode(red_led, OUTPUT);
   digitalWrite(red_led, HIGH);  
