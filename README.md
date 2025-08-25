@@ -1,6 +1,10 @@
 # Autohelm Control Firmware
 
 
+## Development
+
+1. Install PlatformIO
+
 
 ## Quick Start Commands
 
