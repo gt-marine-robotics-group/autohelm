@@ -1,10 +1,9 @@
 # Autohelm Control Firmware
 
-
 ## Development
 
-1. Install PlatformIO
-
+1. Install VSCode and the PlatformIO extension.
+2. Clone this repository and open it as a PlatformIO project.
 
 ## Quick Start Commands
 
