@@ -9,6 +9,7 @@
 #include <std_msgs/msg/float64.h>
 
 #include <MCP_POT.h>
+#include <ServoInput.h>
 
 // #include <rmw_microros/rmw_microros.h>
 #include <std_srvs/srv/set_bool.h>
@@ -47,12 +48,31 @@ uint32_t red_led = 30;
 uint32_t yellow_led = 31;
 uint32_t green_led = 32;
 
-uint32_t servo_1 = 23;
-uint32_t servo_2 = 22;
-uint32_t servo_3 = 21;
-uint32_t servo_4 = 20;
-uint32_t servo_5 = 19;
-uint32_t servo_6 = 18;
+
+const uint32_t servo_1 = 23;
+const uint32_t servo_2 = 22;
+const uint32_t servo_3 = 21;
+const uint32_t servo_4 = 20;
+const uint32_t servo_5 = 19;
+const uint32_t servo_6 = 18;
+
+// RC Stuff
+
+int cmd_srg;  // Commanded Surge
+int cmd_swy;  // Commanded Sway
+int cmd_yaw;  // Commanded Yaw
+int cmd_ctr;  // Commanded Control State
+int cmd_kil;  // Commanded Kill State
+
+// RC INPUTS
+ServoInputPin<servo_1> orxAux1;  // 3 states - Manual / Paused / Autonomous
+// ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
+ServoInputPin<servo_2> orxRudd;  // Continuous
+ServoInputPin<servo_3> orxElev;  // Continuous
+ServoInputPin<servo_4> orxAile;  // Continuous
+ServoInputPin<servo_5> orxThro;  // Continuous
+
+
 
 // throttle_0_en = stbd
 // throttle_1_en = port
@@ -271,6 +291,64 @@ void ros_handler() {
   }
 }
 
+void read_rc() {
+  cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
+  cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
+  cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
+  cmd_ctr = orxAux1.map(0, 2);
+  cmd_kil = 0;  //orxGear.map(1, 0);
+  char buffer[100];
+  // sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i",
+          // cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
+  //Serial.println(buffer);
+}
+
+
+// Translate RC input to 2 motor system
+void set_motor_2x() {
+  int a = (cmd_srg - cmd_yaw);
+  int d = (cmd_srg + cmd_yaw);
+  float max_val = max(100, max(abs(a), abs(d))) / 100;
+  rc_cmd_a = a / max_val;
+  rc_cmd_b = 0;
+  rc_cmd_c = 0;
+  rc_cmd_d = d / max_val;
+}
+
+void exec_mode(int mode, bool killed) {
+  // Vehicle Logic
+  if (killed) {
+    delay(1);
+  } else {
+    if (mode == 0) {  // AUTONOMOUS
+      ros_handler();
+      motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
+      motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
+      motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
+      motor_d.writeMicroseconds(throttleToESC(ros_cmd_d));
+      motor_e.writeMicroseconds(throttleToESC(ros_cmd_e));
+      motor_f.writeMicroseconds(throttleToESC(ros_cmd_f));
+      delay(20);
+    } else if (mode == 1) {  // CALIBRATION
+      calibrate_rc();
+      // cfg_lt(0, 2, 0, 0);
+    } else if (mode == 2) {  // REMOTE CONTROL
+      // set_motor_6x();
+      // cfg_lt(0, 1, 0, 0);
+      Serial.println("Throttle set");
+      motor_a.writeMicroseconds(throttleToESC(rc_cmd_a));
+      motor_b.writeMicroseconds(throttleToESC(rc_cmd_b));
+      motor_c.writeMicroseconds(throttleToESC(rc_cmd_c));
+      motor_d.writeMicroseconds(throttleToESC(rc_cmd_d));
+      motor_e.writeMicroseconds(throttleToESC(rc_cmd_e));
+      motor_f.writeMicroseconds(throttleToESC(rc_cmd_f));
+    } else {
+      Serial.println("Error, mode not supported");
+    }
+  }
+}
+
+
 void setup() {
   Serial.begin(115200);
   set_microros_serial_transports(Serial);
@@ -307,6 +385,8 @@ void loop() {
   // estop_msg.data = true;
   // RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
  
+  read_rc();
+
   ros_handler();
   set_motor_throttles();
   if (state == AGENT_CONNECTED) {
