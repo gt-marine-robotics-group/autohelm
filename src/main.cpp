@@ -16,6 +16,8 @@
 #include <std_msgs/msg/string.h>
 #include <std_msgs/msg/bool.h>
 
+#include <pins.h>
+
 rcl_publisher_t estop_pub;
 
 std_msgs__msg__Bool estop_msg;
@@ -39,22 +41,7 @@ rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-MCP_POT pot(37, 9, 16, 11, 27);
-uint32_t ww_m_en = 8;
-uint32_t ww_thr0_en = 6;
-uint32_t ww_thr1_en = 7;
-
-uint32_t red_led = 30;
-uint32_t yellow_led = 31;
-uint32_t green_led = 32;
-
-
-const uint32_t servo_1 = 23;
-const uint32_t servo_2 = 22;
-const uint32_t servo_3 = 21;
-const uint32_t servo_4 = 20;
-const uint32_t servo_5 = 19;
-const uint32_t servo_6 = 18;
+MCP_POT pot(MCP_SEL, MCP_RST, MCP_SHDN, MCP_DOUT, MCP_CLK);
 
 // RC Stuff
 
@@ -65,12 +52,12 @@ int cmd_ctr;  // Commanded Control State
 int cmd_kil;  // Commanded Kill State
 
 // RC INPUTS
-ServoInputPin<servo_1> orxAux1;  // 3 states - Manual / Paused / Autonomous
+ServoInputPin<SERVO_1> orxAux1;  // 3 states - Manual / Paused / Autonomous
 // ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
-ServoInputPin<servo_2> orxRudd;  // Continuous
-ServoInputPin<servo_3> orxElev;  // Continuous
-ServoInputPin<servo_4> orxAile;  // Continuous
-ServoInputPin<servo_5> orxThro;  // Continuous
+ServoInputPin<SERVO_2> orxRudd;  // Continuous
+ServoInputPin<SERVO_3> orxElev;  // Continuous
+ServoInputPin<SERVO_4> orxAile;  // Continuous
+ServoInputPin<SERVO_5> orxThro;  // Continuous
 
 
 
@@ -110,14 +97,14 @@ void set_motor_throttles(){
     stbd_throttle = 128;
   }
   if (port_throttle != 128) {
-    digitalWrite(ww_thr0_en, HIGH);
+    digitalWrite(WW_THR0_EN, HIGH);
   } else {
-    digitalWrite(ww_thr0_en, LOW);
+    digitalWrite(WW_THR0_EN, LOW);
   }
   if (stbd_throttle != 128) {
-    digitalWrite(ww_thr1_en, HIGH);
+    digitalWrite(WW_THR1_EN, HIGH);
   } else {
-    digitalWrite(ww_thr1_en, LOW);
+    digitalWrite(WW_THR1_EN, LOW);
   }
   pot.setValue(0, port_throttle);
   pot.setValue(1, stbd_throttle);
@@ -155,7 +142,7 @@ void subscription_callback_port(const void * msgin)
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
-  bool estop_status = bool(digitalRead(servo_6));
+  bool estop_status = bool(digitalRead(SERVO_6));
   if (timer != NULL) {
     estop_msg.data = estop_status;
     RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
@@ -183,14 +170,14 @@ void service_callback(const void * req, void * res){
   if(arm){
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
     delay(100);
-    digitalWrite(ww_m_en, HIGH);
+    digitalWrite(WW_M_EN, HIGH);
     delay(1000);
     res_in->success = true; 
   } else {
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-    digitalWrite(ww_m_en, LOW);
-    digitalWrite(ww_thr0_en, LOW);
-    digitalWrite(ww_thr1_en, LOW);
+    digitalWrite(WW_M_EN, LOW);
+    digitalWrite(WW_THR0_EN, LOW);
+    digitalWrite(WW_THR1_EN, LOW);
     res_in->success = true; 
   }  
 }
@@ -263,28 +250,28 @@ void ros_handler() {
   switch (state) {
     case WAITING_AGENT:
       EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 2)) ? AGENT_AVAILABLE : WAITING_AGENT;);
-      digitalWrite(yellow_led, HIGH);  
+      digitalWrite(YELLOW_LED, HIGH);  
       break;
     case AGENT_AVAILABLE:
       created = ros_create_entities();
       state = (true == created) ? AGENT_CONNECTED : WAITING_AGENT;
       delay(100);
-      digitalWrite(yellow_led, LOW);
+      digitalWrite(YELLOW_LED, LOW);
       if (state == WAITING_AGENT) {
         ros_destroy_entities();
-        digitalWrite(green_led, HIGH);         
+        digitalWrite(GREEN_LED, HIGH);         
       };
 
       break;
     case AGENT_CONNECTED:
       EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 4)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
-      digitalWrite(green_led, HIGH); 
+      digitalWrite(GREEN_LED, HIGH); 
       break;
     case AGENT_DISCONNECTED:
       ros_destroy_entities();
       delay(100);
       state = WAITING_AGENT;
-      digitalWrite(green_led, LOW); 
+      digitalWrite(GREEN_LED, LOW); 
       break;
     default:
       break;
@@ -305,46 +292,46 @@ void read_rc() {
 
 
 // Translate RC input to 2 motor system
-void set_motor_2x() {
-  int a = (cmd_srg - cmd_yaw);
-  int d = (cmd_srg + cmd_yaw);
-  float max_val = max(100, max(abs(a), abs(d))) / 100;
-  rc_cmd_a = a / max_val;
-  rc_cmd_b = 0;
-  rc_cmd_c = 0;
-  rc_cmd_d = d / max_val;
-}
+// void set_motor_2x() {
+//   int a = (cmd_srg - cmd_yaw);
+//   int d = (cmd_srg + cmd_yaw);
+//   float max_val = max(100, max(abs(a), abs(d))) / 100;
+//   rc_cmd_a = a / max_val;
+//   rc_cmd_b = 0;
+//   rc_cmd_c = 0;
+//   rc_cmd_d = d / max_val;
+// }
 
 void exec_mode(int mode, bool killed) {
   // Vehicle Logic
   if (killed) {
     delay(1);
   } else {
-    if (mode == 0) {  // AUTONOMOUS
-      ros_handler();
-      motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
-      motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
-      motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
-      motor_d.writeMicroseconds(throttleToESC(ros_cmd_d));
-      motor_e.writeMicroseconds(throttleToESC(ros_cmd_e));
-      motor_f.writeMicroseconds(throttleToESC(ros_cmd_f));
-      delay(20);
-    } else if (mode == 1) {  // CALIBRATION
-      calibrate_rc();
-      // cfg_lt(0, 2, 0, 0);
-    } else if (mode == 2) {  // REMOTE CONTROL
-      // set_motor_6x();
-      // cfg_lt(0, 1, 0, 0);
-      Serial.println("Throttle set");
-      motor_a.writeMicroseconds(throttleToESC(rc_cmd_a));
-      motor_b.writeMicroseconds(throttleToESC(rc_cmd_b));
-      motor_c.writeMicroseconds(throttleToESC(rc_cmd_c));
-      motor_d.writeMicroseconds(throttleToESC(rc_cmd_d));
-      motor_e.writeMicroseconds(throttleToESC(rc_cmd_e));
-      motor_f.writeMicroseconds(throttleToESC(rc_cmd_f));
-    } else {
-      Serial.println("Error, mode not supported");
-    }
+    // if (mode == 0) {  // AUTONOMOUS
+    //   ros_handler();
+    //   motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
+    //   motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
+    //   motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
+    //   motor_d.writeMicroseconds(throttleToESC(ros_cmd_d));
+    //   motor_e.writeMicroseconds(throttleToESC(ros_cmd_e));
+    //   motor_f.writeMicroseconds(throttleToESC(ros_cmd_f));
+    //   delay(20);
+    // } else if (mode == 1) {  // CALIBRATION
+    //   calibrate_rc();
+    //   // cfg_lt(0, 2, 0, 0);
+    // } else if (mode == 2) {  // REMOTE CONTROL
+    //   // set_motor_6x();
+    //   // cfg_lt(0, 1, 0, 0);
+    //   Serial.println("Throttle set");
+    //   motor_a.writeMicroseconds(throttleToESC(rc_cmd_a));
+    //   motor_b.writeMicroseconds(throttleToESC(rc_cmd_b));
+    //   motor_c.writeMicroseconds(throttleToESC(rc_cmd_c));
+    //   motor_d.writeMicroseconds(throttleToESC(rc_cmd_d));
+    //   motor_e.writeMicroseconds(throttleToESC(rc_cmd_e));
+    //   motor_f.writeMicroseconds(throttleToESC(rc_cmd_f));
+    // } else {
+    //   Serial.println("Error, mode not supported");
+    // }
   }
 }
 
@@ -360,20 +347,20 @@ void setup() {
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
   pot.setValue(1, MCP_POT_MIDDLE_VALUE);
 
-  pinMode(servo_6, INPUT_PULLUP);
+  pinMode(SERVO_6, INPUT_PULLUP);
   
-  pinMode(red_led, OUTPUT);
-  digitalWrite(red_led, HIGH);  
-  pinMode(yellow_led, OUTPUT);
-  digitalWrite(yellow_led, HIGH);
-  pinMode(green_led, OUTPUT);
-  digitalWrite(green_led, HIGH);
+  pinMode(RED_LED, OUTPUT);
+  digitalWrite(RED_LED, HIGH);  
+  pinMode(YELLOW_LED, OUTPUT);
+  digitalWrite(YELLOW_LED, HIGH);
+  pinMode(GREEN_LED, OUTPUT);
+  digitalWrite(GREEN_LED, HIGH);
   
   delay(500);
 
-  digitalWrite(red_led, LOW);  
-  digitalWrite(yellow_led, LOW);
-  digitalWrite(green_led, LOW);
+  digitalWrite(RED_LED, LOW);  
+  digitalWrite(YELLOW_LED, LOW);
+  digitalWrite(GREEN_LED, LOW);
 
   state = WAITING_AGENT;
 
