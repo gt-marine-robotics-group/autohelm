@@ -9,7 +9,7 @@
 #include <std_msgs/msg/float64.h>
 
 #include <MCP_POT.h>
-#include <ServoInput.h>
+#include <RCInput.h>
 
 // #include <rmw_microros/rmw_microros.h>
 #include <std_srvs/srv/set_bool.h>
@@ -45,20 +45,14 @@ MCP_POT pot(MCP_SEL, MCP_RST, MCP_SHDN, MCP_DOUT, MCP_CLK);
 
 // RC Stuff
 
+RCInput<SERVO_1, SERVO_2, SERVO_3, SERVO_4, SERVO_5> rcInput;
+
+
 int cmd_srg;  // Commanded Surge
 int cmd_swy;  // Commanded Sway
 int cmd_yaw;  // Commanded Yaw
 int cmd_ctr;  // Commanded Control State
 int cmd_kil;  // Commanded Kill State
-
-// RC INPUTS
-ServoInputPin<SERVO_1> orxAux1;  // 3 states - Manual / Paused / Autonomous
-// ServoInputPin<ORX_GEAR_PIN> orxGear; // 2 states
-ServoInputPin<SERVO_2> orxRudd;  // Continuous
-ServoInputPin<SERVO_3> orxElev;  // Continuous
-ServoInputPin<SERVO_4> orxAile;  // Continuous
-ServoInputPin<SERVO_5> orxThro;  // Continuous
-
 
 
 // throttle_0_en = stbd
@@ -278,17 +272,17 @@ void ros_handler() {
   }
 }
 
-void read_rc() {
-  cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
-  cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
-  cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
-  cmd_ctr = orxAux1.map(0, 2);
-  cmd_kil = 0;  //orxGear.map(1, 0);
-  char buffer[100];
+// void read_rc() {
+//   cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
+//   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
+//   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
+//   cmd_ctr = orxAux1.map(0, 2);
+//   cmd_kil = 0;  //orxGear.map(1, 0);
+//   char buffer[100];
   // sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i",
           // cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
   //Serial.println(buffer);
-}
+// }
 
 
 // Translate RC input to 2 motor system
@@ -372,7 +366,7 @@ void loop() {
   // estop_msg.data = true;
   // RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
  
-  read_rc();
+  rcInput.read();
 
   ros_handler();
   set_motor_throttles();
