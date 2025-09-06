@@ -2,51 +2,14 @@
 #include <micro_ros_platformio.h>
 #include <micro_ros_utilities/string_utilities.h>
 
-#include <rcl/rcl.h>
-#include <rclc/rclc.h>
-#include <rclc/executor.h>
-
-#include <std_msgs/msg/float64.h>
-
-#include <MCP_POT.h>
-#include <RCInput.h>
-
-// #include <rmw_microros/rmw_microros.h>
-#include <std_srvs/srv/set_bool.h>
-#include <std_msgs/msg/string.h>
-#include <std_msgs/msg/bool.h>
-
+#include <rc_input.h>
 #include <pins.h>
 
-rcl_publisher_t estop_pub;
-
-std_msgs__msg__Bool estop_msg;
-
-rcl_timer_t timer;
-
-rcl_service_t service;
-
-std_srvs__srv__SetBool_Response res;
-std_srvs__srv__SetBool_Request req;
-
-// Initialize two subscribers for port and starboard motors
-rcl_subscription_t port_motor;
-rcl_subscription_t stbd_motor;
-
-std_msgs__msg__Float64 port_msg;
-std_msgs__msg__Float64 stbd_msg;
-
-rclc_executor_t executor;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
-
-MCP_POT pot(MCP_SEL, MCP_RST, MCP_SHDN, MCP_DOUT, MCP_CLK);
-
-// RC Stuff
+#include "ros.h"
+#include "motors.h"
+#include "globals.h"
 
 RCInput<SERVO_1, SERVO_2, SERVO_3, SERVO_4, SERVO_5> rcInput;
-
 
 int cmd_srg;  // Commanded Surge
 int cmd_swy;  // Commanded Sway
@@ -55,15 +18,6 @@ int cmd_ctr;  // Commanded Control State
 int cmd_kil;  // Commanded Kill State
 
 
-// throttle_0_en = stbd
-// throttle_1_en = port
-
-uint16_t port_throttle = 128;
-uint16_t stbd_throttle = 128;
-
-ulong loop_time = 0;
-ulong last_time = 0;
-
 enum states {
   WAITING_AGENT,
   AGENT_AVAILABLE,
@@ -71,110 +25,6 @@ enum states {
   AGENT_DISCONNECTED
 } state;
 
-#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
-#define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
-
-#define EXECUTE_EVERY_N_MS(MS, X) \
-  do { \
-    static volatile int64_t init = -1; \
-    if (init == -1) { init = uxr_millis(); } \
-    if (uxr_millis() - init > MS) { \
-      X; \
-      init = uxr_millis(); \
-    } \
-  } while (0)
-
-
-void set_motor_throttles(){
-  if (loop_time - last_time > 2000){
-    port_throttle = 128;
-    stbd_throttle = 128;
-  }
-  if (port_throttle != 128) {
-    digitalWrite(WW_THR0_EN, HIGH);
-  } else {
-    digitalWrite(WW_THR0_EN, LOW);
-  }
-  if (stbd_throttle != 128) {
-    digitalWrite(WW_THR1_EN, HIGH);
-  } else {
-    digitalWrite(WW_THR1_EN, LOW);
-  }
-  pot.setValue(0, port_throttle);
-  pot.setValue(1, stbd_throttle);
-}
-
-// void error_loop(){
-//   while(1){
-//     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-//     delay(100);
-//   }
-// }
-
-
-
-
-int16_t throttle_convert(float input){
-  input *= .9f; // -100 -> -90, 100 -> 90
-  input += 100.0f; // -100 -> 0
-  int16_t throttle = static_cast<int16_t>(input *= 1.28f); // scale to 0-to-256
-  throttle = max(min(255, throttle), 0); // ensure within 0 to 255 range
-  return throttle;
-}
-
-void subscription_callback_port(const void * msgin)
-{  
-  // Loads the message for the port motor
-  const std_msgs__msg__Float64 * msg = (const std_msgs__msg__Float64 *)msgin;
-  float effort = msg->data;
-  uint16_t throttle = throttle_convert(effort);
-
-  // Simulate motor control (adjust this as per actual use case)
-  port_throttle = throttle;
-  last_time = millis();
-}
-
-void timer_callback(rcl_timer_t * timer, int64_t last_call_time) {
-  RCLC_UNUSED(last_call_time);
-  bool estop_status = bool(digitalRead(SERVO_6));
-  if (timer != NULL) {
-    estop_msg.data = estop_status;
-    RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
-  }
-}
-
-void subscription_callback_stbd(const void * msgin)
-{  
-  // Loads the message for the starboard motor
-  const std_msgs__msg__Float64 * msg = (const std_msgs__msg__Float64 *)msgin;
-  float effort = msg->data;
-  uint16_t throttle = throttle_convert(effort);
-
-  // Simulate motor control (adjust this as per actual use case)
-  stbd_throttle = throttle;
-  last_time = millis();
-} 
-
-void service_callback(const void * req, void * res){
-  std_srvs__srv__SetBool_Request * req_in = (std_srvs__srv__SetBool_Request *) req;
-  std_srvs__srv__SetBool_Response * res_in = (std_srvs__srv__SetBool_Response *) res;
-  
-  bool arm = req_in->data;
-
-  if(arm){
-    pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-    delay(100);
-    digitalWrite(WW_M_EN, HIGH);
-    delay(1000);
-    res_in->success = true; 
-  } else {
-    pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-    digitalWrite(WW_M_EN, LOW);
-    digitalWrite(WW_THR0_EN, LOW);
-    digitalWrite(WW_THR1_EN, LOW);
-    res_in->success = true; 
-  }  
-}
 
 bool ros_create_entities() {
   delay(1000);
@@ -301,16 +151,10 @@ void exec_mode(int mode, bool killed) {
   if (killed) {
     delay(1);
   } else {
-    // if (mode == 0) {  // AUTONOMOUS
-    //   ros_handler();
-    //   motor_a.writeMicroseconds(throttleToESC(ros_cmd_a));
-    //   motor_b.writeMicroseconds(throttleToESC(ros_cmd_b));
-    //   motor_c.writeMicroseconds(throttleToESC(ros_cmd_c));
-    //   motor_d.writeMicroseconds(throttleToESC(ros_cmd_d));
-    //   motor_e.writeMicroseconds(throttleToESC(ros_cmd_e));
-    //   motor_f.writeMicroseconds(throttleToESC(ros_cmd_f));
-    //   delay(20);
-    // } else if (mode == 1) {  // CALIBRATION
+    if (mode + 1 == RCInput::ControlState::autonomous) {  // AUTONOMOUS
+      ros_handler();
+    } else if (mode == 1) {  // CALIBRATION
+
     //   calibrate_rc();
     //   // cfg_lt(0, 2, 0, 0);
     // } else if (mode == 2) {  // REMOTE CONTROL
@@ -331,34 +175,36 @@ void exec_mode(int mode, bool killed) {
 
 
 void setup() {
-  Serial.begin(115200);
-  set_microros_serial_transports(Serial);
-  delay(2000);
-
-  SPI.begin();
-  pot.begin();
-
-  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
-  pot.setValue(1, MCP_POT_MIDDLE_VALUE);
-
-  pinMode(SERVO_6, INPUT_PULLUP);
-  
+  // Set all LEDs to be output and on
   pinMode(RED_LED, OUTPUT);
   digitalWrite(RED_LED, HIGH);  
   pinMode(YELLOW_LED, OUTPUT);
   digitalWrite(YELLOW_LED, HIGH);
   pinMode(GREEN_LED, OUTPUT);
   digitalWrite(GREEN_LED, HIGH);
+
+  Serial.begin(115200);
+  set_microros_serial_transports(Serial);
+  delay(2000);
+
+  // Turn off red to indicate microros transports
+  digitalWrite(RED_LED, LOW);  
+
+  SPI.begin();
+  pot.begin();
+
+  pot.setValue(0, MCP_POT_MIDDLE_VALUE);
+  pot.setValue(1, MCP_POT_MIDDLE_VALUE);
   
   delay(500);
-
-  digitalWrite(RED_LED, LOW);  
+  // Turn off yellow to indicate SPI and Pot ready
   digitalWrite(YELLOW_LED, LOW);
-  digitalWrite(GREEN_LED, LOW);
 
   state = WAITING_AGENT;
 
-  // ros_create_entities();
+  ros_create_entities();
+  // Turn off green to indicate ROS entities created
+  digitalWrite(GREEN_LED, LOW);
 }
 
 void loop() {
@@ -368,7 +214,7 @@ void loop() {
  
   rcInput.read();
 
-  ros_handler();
+  
   set_motor_throttles();
   if (state == AGENT_CONNECTED) {
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
