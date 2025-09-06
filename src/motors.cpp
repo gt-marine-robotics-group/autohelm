@@ -38,12 +38,14 @@ bool set_arm(bool arm){
     delay(100);
     digitalWrite(WW_M_EN, HIGH);
     delay(1000);
+    g_armed = true;
     return true; 
   } else {
     pot.setValue(0, MCP_POT_MIDDLE_VALUE);
     digitalWrite(WW_M_EN, LOW);
     digitalWrite(WW_THR0_EN, LOW);
     digitalWrite(WW_THR1_EN, LOW);
+    g_armed = false;
     return true; 
   }  
 }

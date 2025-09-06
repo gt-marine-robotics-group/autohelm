@@ -1,4 +1,5 @@
 #pragma once
+#include <ServoInput.h>
 
 // Wigwag Motor Interface
 constexpr uint8_t WW_M_EN = 8;

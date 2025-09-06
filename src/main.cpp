@@ -9,13 +9,7 @@
 #include "motors.h"
 #include "globals.h"
 
-RCInput<SERVO_1, SERVO_2, SERVO_3, SERVO_4, SERVO_5> rcInput;
-
-int cmd_srg;  // Commanded Surge
-int cmd_swy;  // Commanded Sway
-int cmd_yaw;  // Commanded Yaw
-int cmd_ctr;  // Commanded Control State
-int cmd_kil;  // Commanded Kill State
+RCInput rcInput(g_servo1, g_servo2, g_servo3, g_servo4, g_servo5);
 
 
 enum states {
@@ -94,7 +88,7 @@ void ros_handler() {
   switch (state) {
     case WAITING_AGENT:
       EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 2)) ? AGENT_AVAILABLE : WAITING_AGENT;);
-      digitalWrite(YELLOW_LED, HIGH);  
+      // digitalWrite(YELLOW_LED, HIGH);  
       break;
     case AGENT_AVAILABLE:
       created = ros_create_entities();
@@ -103,9 +97,8 @@ void ros_handler() {
       digitalWrite(YELLOW_LED, LOW);
       if (state == WAITING_AGENT) {
         ros_destroy_entities();
-        digitalWrite(GREEN_LED, HIGH);         
+        // digitalWrite(GREEN_LED, HIGH);         
       };
-
       break;
     case AGENT_CONNECTED:
       EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 4)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
@@ -115,36 +108,21 @@ void ros_handler() {
       ros_destroy_entities();
       delay(100);
       state = WAITING_AGENT;
-      digitalWrite(GREEN_LED, LOW); 
+      // digitalWrite(GREEN_LED, LOW); 
       break;
     default:
       break;
   }
 }
 
-// void read_rc() {
-//   cmd_srg = orxElev.mapDeadzone(-100, 101, 0.05);
-//   cmd_swy = orxAile.mapDeadzone(-100, 101, 0.05);
-//   cmd_yaw = orxRudd.mapDeadzone(-100, 101, 0.05);
-//   cmd_ctr = orxAux1.map(0, 2);
-//   cmd_kil = 0;  //orxGear.map(1, 0);
-//   char buffer[100];
-  // sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i",
-          // cmd_srg, cmd_swy, cmd_yaw, cmd_ctr, cmd_kil);
-  //Serial.println(buffer);
-// }
-
-
 // Translate RC input to 2 motor system
-// void set_motor_2x() {
-//   int a = (cmd_srg - cmd_yaw);
-//   int d = (cmd_srg + cmd_yaw);
-//   float max_val = max(100, max(abs(a), abs(d))) / 100;
-//   rc_cmd_a = a / max_val;
-//   rc_cmd_b = 0;
-//   rc_cmd_c = 0;
-//   rc_cmd_d = d / max_val;
-// }
+void set_motor_2x() {
+  int port = (g_rc_srg - g_rc_yaw);
+  int stbd = (g_rc_srg + g_rc_yaw);
+  float max_val = max(100, max(abs(port), abs(stbd))) / 100;
+  g_rc_peff = port;
+  g_rc_seff = stbd;
+}
 
 void exec_mode(int mode, bool killed) {
   // Vehicle Logic
@@ -152,24 +130,32 @@ void exec_mode(int mode, bool killed) {
     delay(1);
   } else {
     if (mode + 1 == RCInput::ControlState::autonomous) {  // AUTONOMOUS
+      if (!g_armed) {
+        set_arm(true);
+      }
+      digitalWrite(RED_LED, LOW);
+      digitalWrite(YELLOW_LED, LOW);
+      // digitalWrite(GREEN_LED, HIGH);
       ros_handler();
-    } else if (mode == 1) {  // CALIBRATION
-
-    //   calibrate_rc();
-    //   // cfg_lt(0, 2, 0, 0);
-    // } else if (mode == 2) {  // REMOTE CONTROL
-    //   // set_motor_6x();
-    //   // cfg_lt(0, 1, 0, 0);
-    //   Serial.println("Throttle set");
-    //   motor_a.writeMicroseconds(throttleToESC(rc_cmd_a));
-    //   motor_b.writeMicroseconds(throttleToESC(rc_cmd_b));
-    //   motor_c.writeMicroseconds(throttleToESC(rc_cmd_c));
-    //   motor_d.writeMicroseconds(throttleToESC(rc_cmd_d));
-    //   motor_e.writeMicroseconds(throttleToESC(rc_cmd_e));
-    //   motor_f.writeMicroseconds(throttleToESC(rc_cmd_f));
-    // } else {
-    //   Serial.println("Error, mode not supported");
-    // }
+    } else if (mode + 1 == RCInput::ControlState::calibration) {  // CALIBRATION
+      if (g_armed) {
+        set_arm(false);
+      }
+      rcInput.check_calibration_ready();
+      digitalWrite(RED_LED, HIGH);
+      digitalWrite(YELLOW_LED, HIGH);
+      digitalWrite(GREEN_LED, LOW);
+    } else if (mode + 1 == RCInput::ControlState::remote_control) {  // REMOTE CONTROL
+      if (!g_armed) {
+        set_arm(true);
+      }
+      set_motor_2x();
+      port_throttle = throttle_convert((float)g_rc_peff);
+      stbd_throttle = throttle_convert((float)g_rc_seff);
+      digitalWrite(RED_LED, LOW);
+      digitalWrite(YELLOW_LED, HIGH);
+      digitalWrite(GREEN_LED, LOW);
+    }
   }
 }
 
@@ -196,8 +182,10 @@ void setup() {
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
   pot.setValue(1, MCP_POT_MIDDLE_VALUE);
   
+  rcInput.calibrate();
+
   delay(500);
-  // Turn off yellow to indicate SPI and Pot ready
+  // Turn off yellow to indicate SPI, Pot, RC ready
   digitalWrite(YELLOW_LED, LOW);
 
   state = WAITING_AGENT;
@@ -209,11 +197,8 @@ void setup() {
 
 void loop() {
   loop_time = millis();
-  // estop_msg.data = true;
-  // RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
  
   rcInput.read();
-
   
   set_motor_throttles();
   if (state == AGENT_CONNECTED) {
