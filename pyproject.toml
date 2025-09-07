@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autohelm"
-version = "2.0.0"
+version = "2.0"
 dependencies = [
   "typer",
   "protobuf",
@@ -35,7 +35,7 @@ include = [
 
 [[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
 commands = [
-    "python3 scripts/pbpy_gen.py",
+    "python3 autohelm/proto.py",
 ]
 artifacts = []
 clean_artifacts = false
