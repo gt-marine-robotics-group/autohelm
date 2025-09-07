@@ -5,8 +5,8 @@ import sys
 PACKAGE_DIR = Path(__file__).parent.parent
 
 PB_DIR = PACKAGE_DIR / 'proto'
-PBGEN_PY = PACKAGE_DIR / 'gen' / 'pbpy'
-PBGEN_MC = PACKAGE_DIR / 'gen' / 'pbmc'
+PBGEN_PY = PACKAGE_DIR / 'autohelm' / 'pb'
+PBGEN_MC = PACKAGE_DIR / 'firmware' / 'lib' / 'pb'
 
 NANOPB_PLUGIN = Path(sys.executable).parent / 'protoc-gen-nanopb'
 
