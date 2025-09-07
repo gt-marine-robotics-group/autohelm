@@ -4,9 +4,11 @@ import sys
 
 import typer
 
-from autohelm.proto import build_protobuf
+from autohelm.protogen import build_protobuf
 
-app = typer.Typer()
+app = typer.Typer(
+    help='Build firmware'
+)
 
 @app.command('build')
 def build():
