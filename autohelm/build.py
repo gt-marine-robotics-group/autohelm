@@ -12,9 +12,6 @@ PBGEN_MC = PACKAGE_DIR / 'gen' / 'pbmc'
 
 NANOPB_PLUGIN = Path(sys.executable).parent / 'protoc-gen-nanopb'
 
-app = typer.Typer()
-
-@app.command('build-protobuf')
 def build_protobuf():
     """Build Protobuf"""
     PBGEN_PY.mkdir(parents=True, exist_ok=True)
@@ -35,3 +32,10 @@ def build_protobuf():
             f'--nanopb_out={PBGEN_MC}',
             str(pb_file)
         ], check=True)
+
+app = typer.Typer()
+
+@app.command('build')
+def build():
+    """Build"""
+    build_protobuf()

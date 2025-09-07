@@ -25,9 +25,17 @@ readme = "README.md"
 autohelm = "autohelm.app:cli"
 
 [tool.hatch.build.targets.wheel]
+dependencies = ["hatch-build-scripts", "protobuf"]
 include = [
   "/autohelm/*.py",
   "/firmware",
   "/platformio.ini",
   "/proto"
 ]
+
+[[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
+commands = [
+    "python3 scripts/pbpy_gen.py",
+]
+artifacts = []
+clean_artifacts = false
