@@ -10,23 +10,24 @@ TEENSY_UDEV_URL = 'https://www.pjrc.com/teensy/00-teensy.rules'
 TEENSY_UDEV_FILE = CACHE_DIR / '00-teensy.rules'
 
 app = typer.Typer(
-    help='Generate utility files'
+    help='Generate udev files'
 )
 
 @app.callback(invoke_without_command=True)
-def generate(ctx: typer.Context):
+def udev(ctx: typer.Context):
     """Generate"""
     if ctx.invoked_subcommand is None:
         typer.echo(ctx.get_help())
+        typer.echo(
+            'Recommended usage: \n' \
+            "sudo sh -c 'autohelm udev [COMMAND] >> /etc/udev/rules.d/<NAME>.rules"
+        )
         raise typer.Exit()
 
-@app.command('udev-teensy')
-def udev_teensy():
+@app.command('teensy')
+def teensy():
     """
-    Show udev rules to export
-
-    Recommended usage:
-      `sudo sh -c 'autohelm generate udev-teensy >> /etc/udev/rules.d/00-teensy.rules`
+    Teensy udev rules to export to `00-teensy.rules`
     """
     fetch_teensy_udev()
     udev_text = get_teensy_udev()
