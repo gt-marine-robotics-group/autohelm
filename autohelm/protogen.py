@@ -2,7 +2,8 @@ from pathlib import Path
 from subprocess import run
 import sys
 
-PACKAGE_DIR = Path(__file__).parent.parent
+
+PACKAGE_DIR = Path(__file__).parent.parent # Needs to be defined for build
 
 PB_DIR = PACKAGE_DIR / 'proto'
 PBGEN_PY = PACKAGE_DIR / 'autohelm' / 'pb'
