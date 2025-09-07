@@ -25,7 +25,7 @@ readme = "README.md"
 autohelm = "autohelm.app:cli"
 
 [tool.hatch.build.targets.wheel]
-dependencies = ["hatch-build-scripts", "protobuf"]
+dependencies = ["hatch-build-scripts", "protobuf", "nanopb"]
 include = [
   "/autohelm/*.py",
   "/firmware",
