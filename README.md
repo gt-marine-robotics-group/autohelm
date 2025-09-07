@@ -1,27 +1,20 @@
 # Autohelm Control System
 
-## Development
+This package includes a driver and firmware for compatible Marine Robotics Group devices.
+
+## Installation
+
+For standard installation:
+```
+uv tool install autohelm
+```
+
+For developers:
 
 1. Install VSCode and the PlatformIO extension.
 2. Clone this repository and open it as a PlatformIO project.
+3. Install `uv`.
+4. Install the autohelm Python program with `uv tool install -e autohelm --reinstall`.
 
-## Quick Start Commands
-
-```
-ros2 service call /autohelm/arm std_srvs/srv/SetBool "{data: true}"
-```
-
-```
-# First you have to install micro_ros_agent and source ROS with agent
-ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyACM0 --baudrate 115200
-```
-
-```
-# Publish ROS integer value for thrust
-ros2 topic pub /autohelm/port_motor std_msgs/msg/Float64 "data: 0.8" --once
-```
-
-
-
-
+## Quick Start
 
