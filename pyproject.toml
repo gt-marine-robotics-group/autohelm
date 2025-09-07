@@ -9,7 +9,8 @@ dependencies = [
   "typer",
   "protobuf",
   "nanopb",
-  "platformio"
+  "platformio",
+  "vserial @ https://github.com/seantfish/vserial.git"
 ]
 requires-python = ">=3.8"
 authors = [
@@ -25,6 +26,9 @@ readme = "README.md"
 [project.scripts]
 autohelm = "autohelm.app:cli"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 dependencies = ["hatch-build-scripts", "protobuf", "nanopb"]
 include = [
@@ -36,7 +40,7 @@ include = [
 
 [[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
 commands = [
-    "python3 autohelm/protogen.py",
+    "python3 autohelm/utils/protogen.py",
 ]
 artifacts = []
 clean_artifacts = false

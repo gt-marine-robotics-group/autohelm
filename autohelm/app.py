@@ -2,11 +2,21 @@
 
 import typer
 
-from autohelm.build import app as build_app
-from autohelm.udev import app as udev_app
+from autohelm.utils.build import app as build_app
+from autohelm.utils.udev import app as udev_app
+
+from autohelm.run import app as run_app
+
+from autohelm.sim.sim import app as sim_app
 
 cli = typer.Typer()
 
 cli.add_typer(build_app)
 cli.add_typer(udev_app, 
-              name="udev")
+              name='dev')
+
+cli.add_typer(run_app, 
+              name='run')
+
+cli.add_typer(sim_app,
+              name='sim')
