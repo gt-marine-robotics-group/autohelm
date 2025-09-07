@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+message Command {
+    repeated uint32 efforts = 1;
+}

@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "cstdlib": "cpp",
-        "chrono": "cpp",
-        "random": "cpp",
-        "limits": "cpp",
-        "semaphore": "cpp"
-    }
-}

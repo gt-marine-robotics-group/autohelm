@@ -1,4 +1,4 @@
-# Autohelm Control Firmware
+# Autohelm Control System
 
 ## Development
 
