@@ -6,7 +6,7 @@
 #include "motors.h"
 #include "globals.h"
 
-RCInput rcInput(g_servo1, g_servo2, g_servo3, g_servo4, g_servo5);
+RCInput rcInput(g_servo5, g_servo1, g_servo3, g_servo4, g_servo2);
 
 
 enum states {
