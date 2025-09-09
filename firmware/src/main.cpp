@@ -6,7 +6,7 @@
 #include "motors.h"
 #include "globals.h"
 
-RCInput rcInput(g_servo5, g_servo1, g_servo3, g_servo4, g_servo2);
+RCInput rcInput(g_servo5, g_servo2, g_servo3, g_servo4, g_servo1);
 
 
 enum states {
@@ -35,9 +35,9 @@ void exec_mode(int mode, bool killed) {
       if (!g_armed) {
         set_arm(true);
       }
-      digitalWrite(RED_LED, LOW);
+      digitalWrite(RED_LED, HIGH);
       digitalWrite(YELLOW_LED, LOW);
-      // digitalWrite(GREEN_LED, HIGH);
+      digitalWrite(GREEN_LED, HIGH);
     } else if (mode + 1 == RCInput::ControlState::calibration) {  // CALIBRATION
       if (g_armed) {
         set_arm(false);
@@ -71,7 +71,16 @@ void setup() {
   digitalWrite(GREEN_LED, HIGH);
 
   Serial.begin(115200);
+
+  g_servo1.attach();
+  g_servo2.attach();
+  g_servo3.attach();
+  g_servo4.attach();
+  g_servo5.attach();
+
   delay(2000);
+
+
 
   // Turn off red to indicate microros transports
   digitalWrite(RED_LED, LOW);  
@@ -86,6 +95,7 @@ void setup() {
 
   delay(500);
   // Turn off yellow to indicate SPI, Pot, RC ready
+  Serial.println("======= CALIBRATION COMPLETE - RC READY =======");
   digitalWrite(YELLOW_LED, LOW);
 
   // Turn off green to indicate ROS entities created
@@ -96,6 +106,8 @@ void loop() {
   loop_time = millis();
  
   rcInput.read();
+  exec_mode(rcInput.get_ctr_state(), false);
   
   set_motor_throttles();
+  delay(100);
 }

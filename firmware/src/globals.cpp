@@ -18,4 +18,7 @@ int g_rc_yaw = 0;
 int g_rc_ctr = 0;
 int g_rc_kil = 0;
 
+int g_rc_peff = 0;
+int g_rc_seff = 0;
+
 bool g_armed = false;
