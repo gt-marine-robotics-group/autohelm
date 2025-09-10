@@ -22,8 +22,8 @@ void set_motor_2x() {
   int port = (g_rc_srg - g_rc_yaw);
   int stbd = (g_rc_srg + g_rc_yaw);
   float max_val = max(100, max(abs(port), abs(stbd))) / 100;
-  g_rc_peff = port;
-  g_rc_seff = stbd;
+  g_rc_peff = port / max_val;
+  g_rc_seff = stbd / max_val;
 }
 
 void exec_mode(int mode, bool killed) {
@@ -31,24 +31,28 @@ void exec_mode(int mode, bool killed) {
   if (killed) {
     delay(1);
   } else {
-    if (mode + 1 == RCInput::ControlState::autonomous) {  // AUTONOMOUS
+    if (mode == RCInput::ControlState::autonomous) {  // AUTONOMOUS
       if (!g_armed) {
         set_arm(true);
+        Serial.println("AUTONOMOUS - ARMING");
       }
+      Serial.println("AUTONOMOUS");
       digitalWrite(RED_LED, HIGH);
       digitalWrite(YELLOW_LED, LOW);
       digitalWrite(GREEN_LED, HIGH);
-    } else if (mode + 1 == RCInput::ControlState::calibration) {  // CALIBRATION
+    } else if (mode == RCInput::ControlState::calibration) {  // CALIBRATION
       if (g_armed) {
         set_arm(false);
+        Serial.println("CALIBRATION - DISARMING");
       }
       rcInput.check_calibration_ready();
       digitalWrite(RED_LED, HIGH);
       digitalWrite(YELLOW_LED, HIGH);
       digitalWrite(GREEN_LED, LOW);
-    } else if (mode + 1 == RCInput::ControlState::remote_control) {  // REMOTE CONTROL
+    } else if (mode == RCInput::ControlState::remote_control) {  // REMOTE CONTROL
       if (!g_armed) {
         set_arm(true);
+        Serial.println("MANUAL - ARMING");
       }
       set_motor_2x();
       port_throttle = throttle_convert((float)g_rc_peff);
@@ -83,7 +87,9 @@ void setup() {
 
 
   // Turn off red to indicate microros transports
-  digitalWrite(RED_LED, LOW);  
+  digitalWrite(GREEN_LED, LOW);  
+
+  rcInput.calibrate();
 
   SPI.begin();
   pot.begin();
@@ -91,7 +97,7 @@ void setup() {
   pot.setValue(0, MCP_POT_MIDDLE_VALUE);
   pot.setValue(1, MCP_POT_MIDDLE_VALUE);
   
-  rcInput.calibrate();
+  
 
   delay(500);
   // Turn off yellow to indicate SPI, Pot, RC ready
@@ -99,15 +105,18 @@ void setup() {
   digitalWrite(YELLOW_LED, LOW);
 
   // Turn off green to indicate ROS entities created
-  digitalWrite(GREEN_LED, LOW);
+  digitalWrite(RED_LED, LOW);
 }
 
 void loop() {
   loop_time = millis();
  
   rcInput.read();
+  g_rc_srg = rcInput.get_srg();
+  g_rc_swy = rcInput.get_swy();
+  g_rc_yaw = rcInput.get_yaw();
+
   exec_mode(rcInput.get_ctr_state(), false);
   
   set_motor_throttles();
-  delay(100);
 }

@@ -47,7 +47,7 @@ bool RCInput::check_calibration_ready() {
         m_aile.mapDeadzone(-100, 100, 0.1), 
         m_rudd.mapDeadzone(-100, 100, 0.1)
     );
-    Serial.println(buffer);
+    // Serial.println(buffer);
     return (e_s && a_s && r_s);
 }
 
@@ -59,11 +59,11 @@ void RCInput::calibrate() {
     bool calibration_ready = false;
     int calibration_zero_check = 0;
 
-    while(m_ctr_state + 1 != ControlState::calibration || !calibration_ready || !(calibration_zero_check < 15)) {
+    while(m_ctr_state != ControlState::calibration || !calibration_ready || !(calibration_zero_check < 15)) {
         loop_time = millis();
         read();
         calibration_ready = check_calibration_ready();
-        if (abs(m_srg) + abs(m_swy) + abs(m_yaw) <= 4) {
+        if (abs(m_srg) + abs(m_swy) + abs(m_yaw) <= 10) {
             calibration_zero_check += 1;
         }
         else {
@@ -73,9 +73,9 @@ void RCInput::calibrate() {
 }
 
 void RCInput::read() {
-    m_srg = m_elev.mapDeadzone(-100, 101, 0.05);
-    m_swy = m_aile.mapDeadzone(-100, 101, 0.05);
-    m_yaw = m_rudd.mapDeadzone(-100, 101, 0.05);
+    m_srg = m_elev.mapDeadzone(-100, 101, 0.1);
+    m_swy = m_aile.mapDeadzone(-100, 101, 0.1);
+    m_yaw = m_rudd.mapDeadzone(-100, 101, 0.1);
     m_ctr_state = static_cast<ControlState>(m_aux1.map(0, 2));
     // m_kill_state = static_cast<KillState>(m_gear.map(1, 0)); # WRONG ?
     char buffer[100];
