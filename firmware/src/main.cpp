@@ -19,8 +19,8 @@ enum states {
 
 // Translate RC input to 2 motor system
 void set_motor_2x() {
-  int port = (g_rc_srg - g_rc_yaw);
-  int stbd = (g_rc_srg + g_rc_yaw);
+  int port = (g_rc_srg + g_rc_yaw);
+  int stbd = (g_rc_srg - g_rc_yaw);
   float max_val = max(100, max(abs(port), abs(stbd))) / 100;
   g_rc_peff = port / max_val;
   g_rc_seff = stbd / max_val;
