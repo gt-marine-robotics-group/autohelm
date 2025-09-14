@@ -7,13 +7,14 @@ name = "autohelm"
 version = "2.0.1"
 dependencies = [
   "typer",
-  "protobuf<3.20.1",
+  "protobuf",
   "nanopb",
+  "grpcio-tools",
   "platformio",
   "typing_extensions",
   "vserial"
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.12"
 authors = [
   {name = "Sean Fish", email = "seantfish@gmail.com"},
 ]
@@ -31,7 +32,7 @@ autohelm = "autohelm.app:cli"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-dependencies = ["hatch-build-scripts", "protobuf", "nanopb"]
+dependencies = ["hatch-build-scripts", "protobuf", "nanopb", "grpcio-tools"]
 include = [
   "autohelm/*.py",
   "autohelm/sim/**",
