@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autohelm"
-version = "2.0"
+version = "2.0.1"
 dependencies = [
   "typer",
   "protobuf<3.20.1",
   "nanopb",
   "platformio",
-  "vserial @ https://github.com/seantfish/vserial.git"
+  "typing_extensions",
+  "vserial"
 ]
 requires-python = ">=3.8"
 authors = [
@@ -32,16 +33,19 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 dependencies = ["hatch-build-scripts", "protobuf", "nanopb"]
 include = [
-  "/autohelm/**",
-  "/firmware",
-  "/platformio.ini",
-  "/proto",
+  "autohelm/*.py",
+  "autohelm/sim/**",
+  "autohelm/pbmsg/**",
+  "autohelm/utils/**",
+  "autohelm/comm/**",
+  "firmware",
+  "platformio.ini",
+  "proto",
 ]
 
 [[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
 commands = [
-    "python3 autohelm/utils/protogen.py",
+    ["python3 autohelm/utils/protogen.py"]
 ]
-artifacts = ["autohelm/pb/**"]
+artifacts = ["autohelm/pbmsg/command_pb2.py"]
 clean_artifacts = false
-
