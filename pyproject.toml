@@ -46,6 +46,6 @@ artifacts = ["autohelm/pb/**"]
 
 [[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
 commands = [
-    ["python3 autohelm/utils/protogen.py"]
+    ["python autohelm/utils/protogen.py"]
 ]
 clean_artifacts = false
