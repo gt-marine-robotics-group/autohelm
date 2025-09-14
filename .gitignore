@@ -3,4 +3,5 @@
 
 __pycache__
 **/pb/*
+!autohelm/pb/__init__.py
 cache
