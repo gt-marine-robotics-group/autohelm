@@ -35,17 +35,17 @@ dependencies = ["hatch-build-scripts", "protobuf", "nanopb"]
 include = [
   "autohelm/*.py",
   "autohelm/sim/**",
-  "autohelm/pbmsg/**",
+  "autohelm/pb/**",
   "autohelm/utils/**",
   "autohelm/comm/**",
   "firmware",
   "platformio.ini",
   "proto",
 ]
+artifacts = ["autohelm/pb/**"]
 
 [[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
 commands = [
     ["python3 autohelm/utils/protogen.py"]
 ]
-artifacts = ["autohelm/pbmsg/command_pb2.py"]
 clean_artifacts = false

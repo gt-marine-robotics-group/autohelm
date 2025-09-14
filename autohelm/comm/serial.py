@@ -1,5 +1,5 @@
 import serial
-from autohelm.pbmsg.command_pb2 import Command
+from autohelm.pb.command_pb2 import Command
 
 def send():
     ser = serial.Serial('/tmp/mockhelm', 115200, timeout=1)

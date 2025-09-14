@@ -2,7 +2,5 @@
 .vscode
 
 __pycache__
-**/pbmsg/*
+**/pb/*
 cache
-
-firmware/lib/nanopb

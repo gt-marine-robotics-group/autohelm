@@ -9,7 +9,7 @@ except ImportError:
 
 
 PB_DIR = PACKAGE_DIR / 'proto'
-PBGEN_PY = PACKAGE_DIR / 'autohelm' / 'pbmsg'
+PBGEN_PY = PACKAGE_DIR / 'autohelm' / 'pb'
 PBGEN_MC = PACKAGE_DIR / 'firmware' / 'lib' / 'nanopb'
 
 NANOPB_PLUGIN = Path(sys.executable).parent / 'protoc-gen-nanopb'
