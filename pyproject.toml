@@ -32,15 +32,16 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 dependencies = ["hatch-build-scripts", "protobuf", "nanopb"]
 include = [
-  "/autohelm/*.py",
+  "/autohelm/**",
   "/firmware",
   "/platformio.ini",
-  "/proto"
+  "/proto",
 ]
 
 [[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
 commands = [
     "python3 autohelm/utils/protogen.py",
 ]
-artifacts = []
+artifacts = ["autohelm/pb/**"]
 clean_artifacts = false
+
