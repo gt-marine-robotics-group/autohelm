@@ -10,9 +10,12 @@ except ImportError:
 
 PB_DIR = PACKAGE_DIR / 'proto'
 PBGEN_PY = PACKAGE_DIR / 'autohelm' / 'pb'
-PBGEN_MC = PACKAGE_DIR / 'firmware' / 'lib' / 'nanopb'
+PBGEN_MC = PACKAGE_DIR / 'firmware' / 'lib' / 'pb'
 
 NANOPB_PLUGIN = Path(sys.executable).parent / 'protoc-gen-nanopb'
+
+if sys.platform.startswith("win"):
+    NANOPB_PLUGIN = NANOPB_PLUGIN.with_suffix(".exe")
 
 def build_protobuf():
     """Build Protobuf"""
@@ -31,14 +34,17 @@ def build_protobuf():
         except Exception as e:
             print(e)
 
-        run([
-            sys.executable,
-            '-m', 'grpc_tools.protoc',
-            f'-I={PB_DIR}',
-            f'--plugin=protoc-gen-nanopb={NANOPB_PLUGIN}',
-            f'--nanopb_out={PBGEN_MC}',
-            str(pb_file)
-        ], check=True)
+        try:
+            run([
+                sys.executable,
+                '-m', 'grpc_tools.protoc',
+                f'-I={PB_DIR}',
+                f'--plugin=protoc-gen-nanopb={NANOPB_PLUGIN}',
+                f'--nanopb_out={PBGEN_MC}',
+                str(pb_file)
+            ], check=True)
+        except Exception as e:
+            print(e)
 
 if __name__ == "__main__":
     build_protobuf()
