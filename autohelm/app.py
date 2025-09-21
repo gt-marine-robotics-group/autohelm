@@ -9,7 +9,7 @@ from autohelm.run import app as run_app
 
 from autohelm.sim.sim import app as sim_app
 
-cli = typer.Typer()
+cli = typer.Typer(no_args_is_help=True)
 
 cli.add_typer(build_app)
 cli.add_typer(udev_app, 
