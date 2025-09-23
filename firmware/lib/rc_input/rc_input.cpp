@@ -24,7 +24,7 @@ bool RCInput::check_pin_calibrated(ServoInputSignal& input_pin) {
     char buffer[100];
     sprintf(buffer, "Servo PWM (us) | Min: %4u  Val: %4u  Max: %4u | Range: %4u", 
         input_pin.getRangeMin(), pulse, input_pin.getRangeMax(), input_pin.getRange());
-    Serial.println(buffer);
+    //Serial.println(buffer);
     if (input_pin.getRange() < 50 and input_pin.mapDeadzone(-100,100, .02) != 0){
         return false;
     }
@@ -47,7 +47,7 @@ bool RCInput::check_calibration_ready() {
         m_aile.mapDeadzone(-100, 100, 0.1), 
         m_rudd.mapDeadzone(-100, 100, 0.1)
     );
-    // Serial.println(buffer);
+    // //Serial.println(buffer);
     return (e_s && a_s && r_s);
 }
 
@@ -81,7 +81,7 @@ void RCInput::read() {
     char buffer[100];
     sprintf(buffer, "RC | SRG: %4i  SWY: %4i  YAW: %4i CTR: %1i KIL: %1i", 
         m_srg, m_swy, m_yaw, m_ctr_state, m_kill_state);
-    Serial.println(buffer);
+    //Serial.println(buffer);
 }
 
 int RCInput::get_srg() const {
