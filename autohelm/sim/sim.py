@@ -4,7 +4,8 @@ import signal
 from autohelm.sim.mockhelm import MockHelm
 
 app = typer.Typer(
-    help='Run Autohelm Simulation'
+    help='Run Autohelm Simulation',
+    no_args_is_help=True
 )
 
 @app.command('mock')
